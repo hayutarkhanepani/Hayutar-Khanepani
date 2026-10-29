@@ -1,0 +1,7 @@
+{
+  "name": "Water Supply Billing Management System",
+  "description": "Comprehensive billing, household consumer management, meter tracking, voucher generation, counter receipts, and financial reporting for drinking water consumer committees in Nepal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

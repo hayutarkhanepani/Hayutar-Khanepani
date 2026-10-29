@@ -1,0 +1,266 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "AREA_STAFF", "BILLING_STAFF", "CUSTOMER"] },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "householdNumber": { "type": "string", "maxLength": 64 },
+        "isApproved": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "designation": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "role"]
+    },
+    "Household": {
+      "title": "Household",
+      "description": "Water supply consumer household record",
+      "type": "object",
+      "properties": {
+        "customerCode": { "type": "string", "maxLength": 64 },
+        "householdNumber": { "type": "string", "maxLength": 64 },
+        "ownerName": { "type": "string", "maxLength": 128 },
+        "ward": { "type": "string", "maxLength": 16 },
+        "tole": { "type": "string", "maxLength": 128 },
+        "address": { "type": "string", "maxLength": 256 },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 256 },
+        "connectionNumber": { "type": "string", "maxLength": 64 },
+        "meterNumber": { "type": "string", "maxLength": 64 },
+        "monthlyFixedCharge": { "type": "number" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "registrationDate": { "type": "string", "maxLength": 32 },
+        "connectionDate": { "type": "string", "maxLength": 32 },
+        "tariffId": { "type": "string", "maxLength": 64 },
+        "openingBalance": { "type": "number" },
+        "currentBalance": { "type": "number" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["customerCode", "householdNumber", "ownerName", "ward", "status"]
+    },
+    "Ward": {
+      "title": "Ward",
+      "description": "Geographical ward and tole definition with assigned staff",
+      "type": "object",
+      "properties": {
+        "wardNumber": { "type": "string", "maxLength": 16 },
+        "name": { "type": "string", "maxLength": 128 },
+        "inchargeStaffId": { "type": "string", "maxLength": 128 },
+        "inchargeStaffName": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["wardNumber", "name"]
+    },
+    "Tariff": {
+      "title": "Tariff",
+      "description": "Water tariff and penalty rule configurations",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 128 },
+        "nameNepali": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "enum": ["DOMESTIC", "COMMERCIAL", "INSTITUTIONAL"] },
+        "standardMonthlyCharge": { "type": "number" },
+        "sanitationFee": { "type": "number" },
+        "latePenaltyPercentage": { "type": "number" },
+        "earlyDiscountPercentage": { "type": "number" },
+        "effectiveStartDate": { "type": "string" },
+        "inactiveHouseholdCharge": { "type": "number" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "standardMonthlyCharge", "active"]
+    },
+    "Bill": {
+      "title": "Bill",
+      "description": "Monthly water utility bill",
+      "type": "object",
+      "properties": {
+        "billNumber": { "type": "string", "maxLength": 64 },
+        "customerId": { "type": "string", "maxLength": 64 },
+        "householdNumber": { "type": "string", "maxLength": 64 },
+        "customerName": { "type": "string", "maxLength": 128 },
+        "ward": { "type": "string", "maxLength": 16 },
+        "tole": { "type": "string", "maxLength": 128 },
+        "billingMonth": { "type": "string", "maxLength": 32 },
+        "billingYear": { "type": "string", "maxLength": 16 },
+        "nepaliMonthYear": { "type": "string", "maxLength": 64 },
+        "monthlyCharge": { "type": "number" },
+        "previousBalance": { "type": "number" },
+        "sanitationCharge": { "type": "number" },
+        "penaltyAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "balanceDue": { "type": "number" },
+        "issueDate": { "type": "string", "maxLength": 32 },
+        "dueDate": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["UNPAID", "PARTIALLY_PAID", "PAID", "OVERDUE", "CANCELLED"] },
+        "tariffId": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["billNumber", "customerId", "billingMonth", "billingYear", "totalAmount", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Receipt of payment made at counter or online",
+      "type": "object",
+      "properties": {
+        "receiptNumber": { "type": "string", "maxLength": 64 },
+        "customerId": { "type": "string", "maxLength": 64 },
+        "householdNumber": { "type": "string", "maxLength": 64 },
+        "customerName": { "type": "string", "maxLength": 128 },
+        "billId": { "type": "string", "maxLength": 64 },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["CASH", "BANK_TRANSFER", "CHEQUE", "ESEWA", "KHALTI", "CONNECT_IPS"] },
+        "transactionReference": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["PENDING", "COMPLETED", "FAILED", "CANCELLED"] },
+        "receivedBy": { "type": "string", "maxLength": 128 },
+        "staffName": { "type": "string", "maxLength": 128 },
+        "remarks": { "type": "string", "maxLength": 256 },
+        "date": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["receiptNumber", "customerId", "amount", "paymentMethod", "status"]
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Payment voucher generated for counter or bank payment",
+      "type": "object",
+      "properties": {
+        "voucherNumber": { "type": "string", "maxLength": 64 },
+        "customerId": { "type": "string", "maxLength": 64 },
+        "householdNumber": { "type": "string", "maxLength": 64 },
+        "customerName": { "type": "string", "maxLength": 128 },
+        "billId": { "type": "string", "maxLength": 64 },
+        "billingPeriod": { "type": "string", "maxLength": 64 },
+        "amountDue": { "type": "number" },
+        "outstandingBalance": { "type": "number" },
+        "issueDate": { "type": "string", "maxLength": 32 },
+        "expiryDate": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["UNPAID", "PAID", "EXPIRED", "CANCELLED"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["voucherNumber", "customerId", "amountDue", "status"]
+    },
+    "CommitteeSettings": {
+      "title": "CommitteeSettings",
+      "description": "General settings for the water supply committee",
+      "type": "object",
+      "properties": {
+        "committeeName": { "type": "string", "maxLength": 256 },
+        "committeeNameNepali": { "type": "string", "maxLength": 256 },
+        "registrationNumber": { "type": "string", "maxLength": 64 },
+        "address": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 256 },
+        "standardMonthlyCharge": { "type": "number" },
+        "effectiveStartDate": { "type": "string" },
+        "currentFiscalYear": { "type": "string", "maxLength": 32 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["committeeName"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable log of financial and operational events",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 64 },
+        "entityType": { "type": "string", "maxLength": 64 },
+        "entityId": { "type": "string", "maxLength": 64 },
+        "performedBy": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "details": { "type": "string", "maxLength": 1024 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["action", "entityType", "performedBy"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator record for server-side role check",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "admin"] },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    },
+    "RegistrationRequest": {
+      "title": "RegistrationRequest",
+      "description": "Consumer self-registration and household linking applications",
+      "type": "object",
+      "properties": {
+        "requestType": { "type": "string", "enum": ["NEW_CONNECTION", "EXISTING_HOUSEHOLD_LINK"] },
+        "fullName": { "type": "string", "maxLength": 128 },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 256 },
+        "ward": { "type": "string", "maxLength": 16 },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "assignedCustomerCode": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["requestType", "fullName", "phoneNumber", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles and employee records"
+    },
+    "/households/{householdId}": {
+      "schema": { "$ref": "#/entities/Household" },
+      "description": "Consumer households records"
+    },
+    "/wards/{wardId}": {
+      "schema": { "$ref": "#/entities/Ward" },
+      "description": "Wards and toles registry"
+    },
+    "/tariffs/{tariffId}": {
+      "schema": { "$ref": "#/entities/Tariff" },
+      "description": "Water tariff schedules"
+    },
+    "/bills/{billId}": {
+      "schema": { "$ref": "#/entities/Bill" },
+      "description": "Monthly water utility bills"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Receipts and payments records"
+    },
+    "/vouchers/{voucherId}": {
+      "schema": { "$ref": "#/entities/Voucher" },
+      "description": "Generated payment vouchers"
+    },
+    "/registrationRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/RegistrationRequest" },
+      "description": "Consumer self-registration and tap connection requests"
+    },
+    "/committeeSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/CommitteeSettings" },
+      "description": "Committee contact and rules config"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Financial and modification audit logs"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Designated administrator identity documents"
+    }
+  }
+}

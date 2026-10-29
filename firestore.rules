@@ -1,0 +1,285 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all unspecified operations
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isPermanentSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.lower() == "hayutarkhanepani@gmail.com"
+      );
+    }
+
+    function isDelegatedAdmin() {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'admin'] &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isActive', true) == true)
+      );
+    }
+
+    function isSuperAdmin() {
+      return isPermanentSuperAdmin();
+    }
+
+    function isAnyAdmin() {
+      return isPermanentSuperAdmin() || isDelegatedAdmin();
+    }
+
+    function isBillingStaff() {
+      return isSignedIn() && (
+        isAnyAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['BILLING_STAFF', 'staff'] &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isActive', true) == true)
+      );
+    }
+
+    function isAreaStaff() {
+      return isSignedIn() && (
+        isAnyAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['AREA_STAFF', 'BILLING_STAFF', 'staff'] &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isActive', true) == true)
+      );
+    }
+
+    function isStaff() {
+      return isAreaStaff() || isBillingStaff() || isAnyAdmin();
+    }
+
+    // Entity Validation Helpers
+    function isValidUser(data) {
+      return data.uid is string &&
+        data.uid.size() <= 128 &&
+        data.role in ['SUPER_ADMIN', 'ADMIN', 'AREA_STAFF', 'BILLING_STAFF', 'CUSTOMER', 'admin', 'staff', 'customer'];
+    }
+
+    function isValidHousehold(data) {
+      return data.customerCode is string && data.customerCode.size() <= 64 &&
+        data.householdNumber is string && data.householdNumber.size() <= 64 &&
+        data.ownerName is string && data.ownerName.size() <= 128 &&
+        data.ward is string && data.ward.size() <= 16 &&
+        data.status in ['ACTIVE', 'INACTIVE'];
+    }
+
+    function isValidWard(data) {
+      return data.wardNumber is string && data.wardNumber.size() <= 16 &&
+        data.name is string && data.name.size() <= 128;
+    }
+
+    function isValidTariff(data) {
+      return data.name is string && data.name.size() <= 128 &&
+        data.active is bool;
+    }
+
+    function isValidBill(data) {
+      return data.billNumber is string && data.billNumber.size() <= 64 &&
+        data.customerId is string && data.customerId.size() <= 64 &&
+        data.totalAmount is number &&
+        data.status in ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'];
+    }
+
+    function isValidPayment(data) {
+      return data.receiptNumber is string && data.receiptNumber.size() <= 64 &&
+        data.customerId is string && data.customerId.size() <= 64 &&
+        data.amount is number && data.amount > 0 &&
+        data.status in ['PENDING', 'COMPLETED', 'FAILED', 'CANCELLED'];
+    }
+
+    function isValidVoucher(data) {
+      return data.voucherNumber is string && data.voucherNumber.size() <= 64 &&
+        data.customerId is string && data.customerId.size() <= 64 &&
+        data.amountDue is number && data.amountDue >= 0 &&
+        data.status in ['UNPAID', 'PAID', 'EXPIRED', 'CANCELLED'];
+    }
+
+    function isValidSettings(data) {
+      return data.committeeName is string && data.committeeName.size() <= 256;
+    }
+
+    function isValidAuditLog(data) {
+      return data.action is string && data.action.size() <= 64 &&
+        data.entityType is string && data.entityType.size() <= 64 &&
+        data.performedBy is string && data.performedBy.size() <= 128;
+    }
+
+    // Admins Collection: strictly restricted to Permanent Super Admin
+    match /admins/{adminUid} {
+      allow get: if isSignedIn();
+      allow list: if isPermanentSuperAdmin();
+      allow write: if isPermanentSuperAdmin();
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isStaff());
+      allow list: if isStaff();
+      // Public registrations can ONLY create CUSTOMER role; staff accounts can only be created by permanent Super Admin
+      allow create: if isSignedIn() && (isOwner(userId) || isPermanentSuperAdmin()) && isValidUser(incoming()) && (
+        (incoming().role in ['CUSTOMER', 'customer']) || isPermanentSuperAdmin()
+      );
+      // Privilege modification (roles, permissions, isActive) strictly reserved for Permanent Super Admin
+      allow update: if isSignedIn() && isValidUser(incoming()) && (
+        isPermanentSuperAdmin() ||
+        (isOwner(userId) && incoming().role == existing().role &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phoneNumber', 'email', 'updatedAt', 'customerId', 'householdNumber', 'isApproved'])) ||
+        (isDelegatedAdmin() && incoming().role == existing().role &&
+         incoming().get('isActive', true) == existing().get('isActive', true) &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phoneNumber', 'email', 'updatedAt', 'customerId', 'householdNumber', 'isApproved', 'assignedWards', 'assignedToles', 'designation']))
+      );
+      allow delete: if isPermanentSuperAdmin();
+    }
+
+    // Wards Collection
+    match /wards/{wardId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAnyAdmin() && isValidWard(incoming());
+    }
+
+    // Consumer Categories Collection
+    match /consumerCategories/{catId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAnyAdmin();
+    }
+
+    // Households Collection
+    match /households/{householdId} {
+      allow get: if isSignedIn() && (
+        isSuperAdmin() ||
+        isStaff() ||
+        (resource.data.userId == request.auth.uid) ||
+        (resource.data.customerCode == request.auth.uid)
+      );
+      allow list: if isStaff() || isSignedIn();
+      allow create: if isStaff() && isValidHousehold(incoming());
+      allow update: if isValidHousehold(incoming()) && (
+        isStaff() ||
+        (isSignedIn() && existing().userId == request.auth.uid &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['phoneNumber', 'email', 'updatedAt']))
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Tariffs Collection
+    match /tariffs/{tariffId} {
+      allow get, list: if true;
+      allow create, update: if isSuperAdmin() && isValidTariff(incoming());
+      allow delete: if isSuperAdmin();
+    }
+
+    // Bills Collection
+    match /bills/{billId} {
+      allow get: if isSignedIn() && (
+        isStaff() ||
+        resource.data.customerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow list: if isSignedIn();
+      allow create, update: if isBillingStaff() && isValidBill(incoming());
+      allow delete: if isSuperAdmin();
+    }
+
+    // Payments Collection (Immutable Ledger with Audited Date Correction by Super Admin)
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && (
+        isStaff() ||
+        resource.data.customerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow list: if isSignedIn();
+      allow create: if isBillingStaff() && isValidPayment(incoming());
+      // Financial amounts and numbers are strictly immutable; only audited date correction permitted for Super Admin
+      allow update: if isSuperAdmin() &&
+        incoming().amount == existing().amount &&
+        incoming().receiptNumber == existing().receiptNumber &&
+        incoming().customerId == existing().customerId &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['date', 'correctedDate', 'correctionReason', 'correctedBy', 'correctedAt', 'updatedAt']);
+      allow delete: if false; // Strict financial ledger: payments cannot be deleted
+    }
+
+    // Vouchers Collection
+    match /vouchers/{voucherId} {
+      allow get: if isSignedIn() && (
+        isStaff() ||
+        resource.data.customerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        isStaff() ||
+        resource.data.customerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isValidVoucher(incoming()) && (
+        isStaff() ||
+        incoming().customerId == request.auth.uid ||
+        incoming().userId == request.auth.uid
+      );
+      allow update: if isBillingStaff() && isValidVoucher(incoming());
+      allow delete: if isSuperAdmin();
+    }
+
+    // Consumer Registration & Household Linking Requests
+    match /registrationRequests/{requestId} {
+      allow get: if isSignedIn() && (
+        isStaff() ||
+        resource.data.userId == request.auth.uid
+      );
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isStaff();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Committee Settings
+    match /committeeSettings/{settingId} {
+      allow get, list: if true;
+      allow create, update: if isSuperAdmin() && isValidSettings(incoming());
+      allow delete: if isSuperAdmin();
+    }
+
+    // Audit Logs (Append-Only)
+    match /auditLogs/{logId} {
+      allow get, list: if isSuperAdmin();
+      allow create: if isSignedIn() && isValidAuditLog(incoming());
+      allow update, delete: if false; // Audit logs can never be tampered with
+    }
+
+    // Staff Activity & Cash Handover Reconciliations
+    match /staffReconciliations/{reconciliationId} {
+      allow get, list: if isSuperAdmin();
+      allow create: if isBillingStaff() || isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if false; // Historical reconciliations cannot be deleted
+    }
+
+    // Connection Test Document
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', 'Mukta', system-ui, -apple-system, sans-serif;
+    color: #1e293b;
+    background-color: #f8fafc;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 8mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app shell elements when printing */
+  nav,
+  header,
+  aside,
+  footer,
+  .print\:hidden,
+  .no-print,
+  #app-print-frame {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Isolate modal container in print so background pages never leak */
+  body.is-printing-bill #root > *:not(.printable-modal-overlay),
+  body.is-printing-receipt #root > *:not(.printable-modal-overlay) {
+    display: none !important;
+  }
+
+  /* Reset modal positioning to normal page flow */
+  .printable-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    box-shadow: none !important;
+  }
+
+  .printable-modal-card {
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
+  /* Individual document elements */
+  #printable-bill,
+  #printable-consumer-card,
+  #printable-voucher,
+  #printable-roster {
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 12px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  #printable-receipt {
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 2mm 4mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  .receipt-half-copy {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .receipt-cut-line {
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+  }
+}
+
