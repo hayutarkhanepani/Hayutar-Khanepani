@@ -84,7 +84,7 @@ service cloud.firestore {
         data.householdNumber is string && data.householdNumber.size() <= 64 &&
         data.ownerName is string && data.ownerName.size() <= 128 &&
         data.ward is string && data.ward.size() <= 16 &&
-        data.status in ['ACTIVE', 'INACTIVE'];
+        data.status in ['ACTIVE', 'INACTIVE', 'DEACTIVATED', 'ARCHIVED'];
     }
 
     function isValidWard(data) {
@@ -101,7 +101,7 @@ service cloud.firestore {
       return data.billNumber is string && data.billNumber.size() <= 64 &&
         data.customerId is string && data.customerId.size() <= 64 &&
         data.totalAmount is number &&
-        data.status in ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'];
+        data.status in ['PENDING_APPROVAL', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'CANCELLED'];
     }
 
     function isValidPayment(data) {
@@ -200,7 +200,9 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid
       );
       allow list: if isSignedIn();
-      allow create, update: if isBillingStaff() && isValidBill(incoming());
+      allow create: if (isBillingStaff() && isValidBill(incoming())) ||
+        (isSignedIn() && incoming().status == 'PENDING_APPROVAL' && isValidBill(incoming()));
+      allow update: if isBillingStaff() && isValidBill(incoming());
       allow delete: if isSuperAdmin();
     }
 
